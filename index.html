@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.webmanifest">
+<title>变电安全题库</title>
+<style>
+:root{--brand:#0f766e;--brand2:#115e59;--bg:#f3f7f6;--card:#fff;--text:#123;--muted:#64748b;--ok:#15803d;--bad:#b91c1c;--line:#dbe5e2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{background:linear-gradient(135deg,var(--brand2),var(--brand));color:#fff;padding:20px 16px 16px;position:sticky;top:0;z-index:5;box-shadow:0 2px 12px #0002}h1{font-size:22px;margin:0 0 6px}header p{margin:0;color:#d9fffa;font-size:13px}
+.wrap{max-width:760px;margin:auto;padding:12px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.toolbar select,.toolbar button,.actions button{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font-size:14px}.toolbar button,.actions button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.stat{background:var(--card);border-radius:12px;padding:10px;text-align:center;border:1px solid var(--line)}.stat b{display:block;font-size:19px;color:var(--brand2)}.stat span{font-size:12px;color:var(--muted)}
+.progress{height:8px;background:#dfeae7;border-radius:99px;overflow:hidden;margin:12px 0}.progress i{display:block;height:100%;background:var(--brand);transition:width .2s}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 16px #0f766e0d}.meta{font-size:12px;color:var(--muted);margin-bottom:10px}.question{font-size:18px;line-height:1.65;font-weight:600;white-space:pre-wrap}.hint{font-size:12px;color:var(--muted);margin:10px 0}
+.option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;margin:9px 0;cursor:pointer;line-height:1.5;background:#fff}.option:has(input:checked){border-color:var(--brand);background:#ecfdf8}.option input{margin-top:3px;accent-color:var(--brand);transform:scale(1.2)}.letter{font-weight:700;color:var(--brand2);min-width:22px}.option.disabled{cursor:default}.option.correct{border-color:#86efac;background:#f0fdf4}.option.wrong{border-color:#fca5a5;background:#fef2f2}
+.actions{display:flex;gap:8px;margin-top:14px}.actions button{flex:1;min-height:44px}.feedback{margin-top:14px;border-radius:12px;padding:12px;font-size:14px;line-height:1.6}.feedback.ok{background:#f0fdf4;color:#166534}.feedback.bad{background:#fef2f2;color:#991b1b}.feedback b{font-weight:700}.explain{margin-top:8px;color:#334155;white-space:pre-wrap}
+.empty{text-align:center;padding:30px;color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}.linkbtn{border:0;background:none;color:var(--brand2);text-decoration:underline;padding:0;font-size:12px}
+@media(max-width:480px){.question{font-size:17px}.toolbar select,.toolbar button{flex:1}.stats{gap:6px}.stat{padding:8px 4px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>变电安全题库</h1><p>变电检修（A）＋变电基建（A） · 手机刷题版</p></div></header>
+<main class="wrap">
+<div class="toolbar"><select id="source"><option value="all">全部题目（384）</option><option value="检修">变电检修（A）</option><option value="基建">变电基建（A）</option></select><select id="mode"><option value="practice">顺序刷题</option><option value="random">随机刷题</option><option value="wrong">错题重做</option></select><button id="reset">重置进度</button></div>
+<div class="stats"><div class="stat"><b id="done">0</b><span>已作答</span></div><div class="stat"><b id="correct">0</b><span>答对</span></div><div class="stat"><b id="rate">0%</b><span>正确率</span></div><div class="stat"><b id="wrongCount">0</b><span>待重做</span></div></div>
+<div class="progress"><i id="bar" style="width:0%"></i></div>
+<section id="app" class="card"></section>
+<footer>题目来源：用户提供的《9.变电检修（A）.xlsx》《10.变电基建（A）.xlsx》<br>可添加到手机主屏幕，支持离线使用</footer>
+</main>
+<script>
+const $=s=>document.querySelector(s);let all=[],list=[],idx=0,answered=false,stats=JSON.parse(localStorage.getItem('bian-stats')||'{"done":0,"correct":0,"wrong":[]}');
+function save(){localStorage.setItem('bian-stats',JSON.stringify(stats));localStorage.setItem('bian-pos',JSON.stringify({source:$('#source').value,mode:$('#mode').value,idx}))}
+function isMulti(q){return q.answer.replace(/\s/g,'').length>1&&!['T','F'].includes(q.answer.trim())}
+function label(i){return String.fromCharCode(65+i)}
+function answerText(q){let a=q.answer.trim(); if(a==='T')return '正确'; if(a==='F')return '错误'; return a.split('').join('、')}
+function build(){let s=$('#source').value,m=$('#mode').value;list=all.filter(q=>s==='all'||q.source.includes(s));if(m==='wrong')list=list.filter(q=>stats.wrong.includes(q.source+'#'+q.id));if(m==='random')list=[...list].sort(()=>Math.random()-.5);idx=Math.min(idx,list.length-1);if(idx<0)idx=0;answered=false;render();}
+function render(){updateStats();let el=$('#app');if(!list.length){el.innerHTML='<div class="empty">当前筛选下没有题目。<br><br><button class="toolbar button" onclick="$(\'#mode\').value=\'practice\';build()">返回全部题目</button></div>';return}let q=list[idx];let multi=isMulti(q);let type=q.answer==='T'||q.answer==='F'?'判断题':multi?'多选题':'单选题';el.innerHTML=`<div class="meta">第 ${idx+1} / ${list.length} 题 · ${type} · ${q.source.includes('检修')?'变电检修（A）':'变电基建（A）'}</div><div class="question">${esc(q.question)}</div><div class="hint">${multi?'请选择全部正确选项':type==='判断题'?'请选择“正确”或“错误”':'请选择一个答案'}，然后点击“下一题”</div><div id="opts">${q.options.map((o,i)=>`<label class="option" data-i="${i}"><input type="${multi?'checkbox':'radio'}" name="answer" value="${i}"><span class="letter">${label(i)}</span><span>${esc(o)}</span></label>`).join('')}</div><div class="actions"><button id="prev">上一题</button><button class="primary" id="next">下一题</button></div><div id="feedback"></div>`;$('#prev').onclick=()=>{idx=Math.max(0,idx-1);answered=false;render()};$('#next').onclick=()=>advance(q);if(answered)showAnswer(q)}
+function selected(){return [...document.querySelectorAll('input[name=answer]:checked')].map(x=>+x.value)}
+function advance(q){if(!answered&&selected().length)check(q);if(idx<list.length-1){idx++;answered=false;render()}else{alert('本组题目已完成！');}}
+function normalizedPicked(q,picked){if(q.answer==='T'||q.answer==='F')return picked.map(i=>i===0?'T':'F').join('');return picked.map(label).sort().join('')}
+function check(q){let picked=selected();if(!picked.length){alert('请先选择答案');return}let letters=normalizedPicked(q,picked);let ok=letters===q.answer.trim().replace(/\s/g,'').split('').sort().join('');let key=q.source+'#'+q.id;stats.done++;if(ok){stats.correct++;stats.wrong=stats.wrong.filter(x=>x!==key)}else if(!stats.wrong.includes(key))stats.wrong.push(key);answered=true;save();showAnswer(q,ok);updateStats()}
+function showAnswer(q,ok){document.querySelectorAll('.option').forEach((e,i)=>{e.classList.add('disabled');let right=q.answer==='T'?i===0:q.answer==='F'?i===1:q.answer.includes(label(i));if(right)e.classList.add('correct');if(e.querySelector('input').checked&&!right)e.classList.add('wrong');e.querySelector('input').disabled=true});let f=$('#feedback');if(!f)return;f.className='feedback '+(ok===false?'bad':'ok');f.innerHTML=`<b>${ok===false?'回答错误':'答案：'+answerText(q)}</b>${ok===false?' · 正确答案：'+answerText(q):''}${q.explain?'<div class="explain">'+esc(q.explain)+'</div>':''}`}
+function next(){if(idx<list.length-1){idx++;answered=false;render()}else{alert('本组题目已完成！');}}
+function updateStats(){$('#done').textContent=stats.done;$('#correct').textContent=stats.correct;$('#rate').textContent=stats.done?Math.round(stats.correct/stats.done*100)+'%':'0%';$('#wrongCount').textContent=stats.wrong.length;$('#bar').style.width=list.length?((idx+1)/list.length*100)+'%':'0%'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function init(){let r=await fetch('questions.json');all=await r.json();let p=JSON.parse(localStorage.getItem('bian-pos')||'{}');if(p.source)$('#source').value=p.source;if(p.mode)$('#mode').value=p.mode;build();$('#source').onchange=()=>{idx=0;build()};$('#mode').onchange=()=>{idx=0;build()};$('#reset').onclick=()=>{if(confirm('确定清空答题统计和错题记录吗？')){stats={done:0,correct:0,wrong:[]};idx=0;save();build()}};if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}
+init();
+</script>
+</body></html>
