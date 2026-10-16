@@ -1,4 +1,4 @@
-const CACHE = "bian-tiku-v4-2026-10-17";
+const CACHE = "bian-tiku-v5-2026-10-17";
 const ASSETS = ["./", "./index.html", "./questions.json", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
