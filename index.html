@@ -26,17 +26,16 @@ header{background:linear-gradient(135deg,var(--brand2),var(--brand));color:#fff;
 <body>
 <header><div class="wrap"><h1>变电安全题库</h1><p>变电检修（A）＋变电基建（A） · 手机刷题版</p></div></header>
 <main class="wrap">
-<div class="toolbar"><select id="source"><option value="all">全部题目（384）</option><option value="检修">变电检修（A）</option><option value="基建">变电基建（A）</option></select><select id="mode"><option value="practice">顺序刷题</option><option value="random">随机刷题</option><option value="wrong">错题重做</option></select><button id="resetWrong">清除错题痕迹</button><button id="reset">重置全部记录</button></div>
+<div class="toolbar"><select id="source"><option value="all">全部题目（384）</option><option value="检修">变电检修（A）</option><option value="基建">变电基建（A）</option></select><select id="mode"><option value="practice">顺序刷题</option><option value="random">随机刷题</option><option value="wrong">错题重做</option></select><button id="resetWrong">清除错题痕迹</button><button id="reset">重置全部记录</button><button id="toggleNavigator">题号跳转</button></div>
 <div class="stats"><div class="stat"><b id="done">0</b><span>已作答</span></div><div class="stat"><b id="correct">0</b><span>答对</span></div><div class="stat"><b id="rate">0%</b><span>正确率</span></div><div class="stat"><b id="wrongCount">0</b><span>待重做</span></div></div>
 <div class="progress"><i id="bar" style="width:0%"></i></div>
-<div class="navigator-head"><span>题号跳转</span><span class="legend"><i class="green">绿：答对</i><i class="red">红：答错</i></span></div>
-<div id="navigator" class="navigator"></div>
+<div id="navigatorPanel" hidden><div class="navigator-head"><span>题号跳转</span><span class="legend"><i class="green">绿：答对</i><i class="red">红：答错</i></span></div><div id="navigator" class="navigator"></div></div>
 <section id="app" class="card"></section>
 <footer>题目来源：用户提供的《9.变电检修（A）.xlsx》《10.变电基建（A）.xlsx》<br>可添加到手机主屏幕，支持离线使用</footer>
 </main>
 <script>
-const $=s=>document.querySelector(s);let all=[],list=[],idx=0,answered=false,lastCorrect=false,stats=JSON.parse(localStorage.getItem('bian-stats')||'{"done":0,"correct":0,"wrong":[]}');stats.answers=stats.answers||{};
-function save(){localStorage.setItem('bian-stats',JSON.stringify(stats));localStorage.setItem('bian-pos',JSON.stringify({source:$('#source').value,mode:$('#mode').value,idx}))}
+const APP_VERSION='v4-2026-10-17';const STATS_KEY='bian-stats-'+APP_VERSION;const POS_KEY='bian-pos-'+APP_VERSION;const $=s=>document.querySelector(s);if(localStorage.getItem('bian-app-version')!==APP_VERSION){Object.keys(localStorage).filter(key=>(key.startsWith('bian-stats')||key.startsWith('bian-pos'))&&key!==STATS_KEY&&key!==POS_KEY).forEach(key=>localStorage.removeItem(key));localStorage.setItem('bian-app-version',APP_VERSION)}let all=[],list=[],idx=0,answered=false,lastCorrect=false,navigatorOpen=false,stats=JSON.parse(localStorage.getItem(STATS_KEY)||'{"done":0,"correct":0,"wrong":[]}');stats.answers=stats.answers||{};
+function save(){localStorage.setItem(STATS_KEY,JSON.stringify(stats));localStorage.setItem(POS_KEY,JSON.stringify({source:$('#source').value,mode:$('#mode').value,idx}))}
 function isMulti(q){return q.answer.replace(/\s/g,'').length>1&&!['T','F'].includes(q.answer.trim())}
 function label(i){return String.fromCharCode(65+i)}
 function answerText(q){let a=q.answer.trim(); if(a==='T')return '正确'; if(a==='F')return '错误'; return a.split('').join('、')}
@@ -53,7 +52,7 @@ function showAnswer(q,ok){document.querySelectorAll('.option').forEach((e,i)=>{e
 function next(){if(idx<list.length-1){idx++;answered=false;render()}else{alert('本组题目已完成！');}}
 function updateStats(){$('#done').textContent=stats.done;$('#correct').textContent=stats.correct;$('#rate').textContent=stats.done?Math.round(stats.correct/stats.done*100)+'%':'0%';$('#wrongCount').textContent=stats.wrong.length;$('#bar').style.width=list.length?((idx+1)/list.length*100)+'%':'0%';renderNavigator()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function init(){let r=await fetch('questions.json');all=await r.json();let p=JSON.parse(localStorage.getItem('bian-pos')||'{}');if(p.source)$('#source').value=p.source;if(p.mode)$('#mode').value=p.mode;build();$('#source').onchange=()=>{idx=0;build()};$('#mode').onchange=()=>{idx=0;build()};$('#resetWrong').onclick=()=>{if(confirm('清除错题的作答痕迹，但保留错题列表吗？')){stats.wrong.forEach(key=>delete stats.answers[key]);save();build()}};$('#reset').onclick=()=>{if(confirm('确定清空全部答题统计、选项记录和错题吗？')){stats={done:0,correct:0,wrong:[],answers:{}};idx=0;save();build()}};if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}
+async function init(){let r=await fetch('questions.json');all=await r.json();let p=JSON.parse(localStorage.getItem(POS_KEY)||'{}');if(p.source)$('#source').value=p.source;if(p.mode)$('#mode').value=p.mode;$('#navigatorPanel').hidden=true;$('#toggleNavigator').onclick=()=>{navigatorOpen=!navigatorOpen;$('#navigatorPanel').hidden=!navigatorOpen;if(navigatorOpen)renderNavigator()};build();$('#source').onchange=()=>{idx=0;build()};$('#mode').onchange=()=>{idx=0;build()};$('#resetWrong').onclick=()=>{if(confirm('清除错题的作答痕迹，但保留错题列表吗？')){stats.wrong.forEach(key=>delete stats.answers[key]);save();build()}};$('#reset').onclick=()=>{if(confirm('确定清空全部答题统计、选项记录和错题吗？')){stats={done:0,correct:0,wrong:[],answers:{}};idx=0;save();build()}};if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')}
 init();
 </script>
 </body></html>
